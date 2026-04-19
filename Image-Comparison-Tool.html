@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+* {box-sizing: border-box;}
+
+.img-comp-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  cursor: ew-resize;
+}
+
+.img-comp-img {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.img-comp-img img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+}
+
+.img-comp-slider {
+  position: absolute;
+  z-index: 9;
+  cursor: ew-resize;
+  width: 4px;
+  height: 100%;
+  top: 0;
+  background-color: #2196F3;
+  opacity: 0.9;
+}
+
+.img-label {
+  position: absolute;
+  top: 10px;
+  z-index: 10;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 12px;
+  font-family: sans-serif;
+  padding: 4px 10px;
+  border-radius: 4px;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.file-inputs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.file-inputs label {
+  flex: 1;
+  display: block;
+  padding: 8px 12px;
+  border: 1.5px dashed #aaa;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: center;
+  font-family: sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-inputs input[type=file] { display: none; }
+
+#start-btn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#start-btn:disabled { opacity: 0.4; cursor: default; }
+
+.resize-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 13px;
+  font-family: sans-serif;
+}
+
+.resize-bar input[type=range] { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="file-inputs">
+  <label id="label-a"><input type="file" id="file-a" accept="image/*">📁 1. Picture</label>
+  <label id="label-b"><input type="file" id="file-b" accept="image/*">📁 2. Picture</label>
+</div>
+
+<button id="start-btn" disabled onclick="buildCompare()">COMPARE IMAGES</button>
+
+<div id="comp-container" class="img-comp-container" style="display:none;">
+  <div class="img-comp-img" id="img-base">
+    <img id="image2">
+  </div>
+  <div class="img-comp-img img-comp-overlay" id="img-overlay">
+    <img id="image1">
+  </div>
+  <div class="img-label" id="lbl-left" style="left:10px;"></div>
+  <div class="img-label" id="lbl-right" style="right:10px;"></div>
+</div>
+
+<div id="resize-bar" class="resize-bar" style="display:none;">
+  <span>🔍</span>
+  <input type="range" id="size-slider" min="200" max="900" value="500" oninput="resizeContainer(this.value)">
+  <span id="size-val">500px</span>
+</div>
+
+<script>
+var urlA = null, urlB = null, nameA = '1. Resim', nameB = '2. Resim';
+
+document.getElementById('file-a').addEventListener('change', function() {
+  if (this.files[0]) {
+    urlA = URL.createObjectURL(this.files[0]);
+    nameA = this.files[0].name;
+    document.getElementById('label-a').textContent = '✅ ' + nameA;
+    checkReady();
+  }
+});
+
+document.getElementById('file-b').addEventListener('change', function() {
+  if (this.files[0]) {
+    urlB = URL.createObjectURL(this.files[0]);
+    nameB = this.files[0].name;
+    document.getElementById('label-b').textContent = '✅ ' + nameB;
+    checkReady();
+  }
+});
+
+function checkReady() {
+  document.getElementById('start-btn').disabled = !(urlA && urlB);
+}
+
+function resizeContainer(val) {
+  var container = document.getElementById('comp-container');
+  var imgBase = document.getElementById('image2');
+  document.getElementById('size-val').textContent = val + 'px';
+  container.style.height = val + 'px';
+}
+
+function buildCompare() {
+  var imgBase = document.getElementById('image2');
+  var imgOverlay = document.getElementById('image1');
+  imgBase.src = urlA;
+  imgOverlay.src = urlB;
+
+  document.getElementById('lbl-left').textContent = nameA;
+  document.getElementById('lbl-right').textContent = nameB;
+
+  imgBase.onload = function() {
+    var container = document.getElementById('comp-container');
+    var ratio = imgBase.naturalHeight / imgBase.naturalWidth;
+    var w = container.offsetWidth || window.innerWidth;
+    var h = Math.round(w * ratio);
+    h = Math.min(h, 600);
+    container.style.height = h + 'px';
+    container.style.display = 'block';
+
+    var sizeSlider = document.getElementById('size-slider');
+    sizeSlider.min = Math.round(h * 0.3);
+    sizeSlider.max = Math.max(h * 2, 900);
+    sizeSlider.value = h;
+    document.getElementById('size-val').textContent = h + 'px';
+    document.getElementById('resize-bar').style.display = 'flex';
+
+    initComparisons();
+  };
+}
+
+function initComparisons() {
+  var x = document.getElementsByClassName("img-comp-overlay");
+  for (var i = 0; i < x.length; i++) compareImages(x[i]);
+
+  function compareImages(img) {
+    var slider, clicked = 0, w, h;
+    var container = img.parentElement;
+
+    // temizle eski slider varsa
+    var old = container.querySelector('.img-comp-slider');
+    if (old) old.remove();
+
+    w = container.offsetWidth;
+    h = container.offsetHeight;
+    img.style.width = (w / 2) + "px";
+
+    slider = document.createElement("DIV");
+    slider.setAttribute("class", "img-comp-slider");
+    container.insertBefore(slider, img);
+    slider.style.top = "0px";
+    slider.style.height = h + "px";
+    slider.style.left = (w / 2) - (slider.offsetWidth / 2) + "px";
+
+    container.addEventListener("mousedown", slideReady);
+    window.addEventListener("mouseup", slideFinish);
+    container.addEventListener("touchstart", slideReady);
+    window.addEventListener("touchend", slideFinish);
+
+    function slideReady(e) { e.preventDefault(); clicked = 1; window.addEventListener("mousemove", slideMove); window.addEventListener("touchmove", slideMove); }
+    function slideFinish() { clicked = 0; }
+    function slideMove(e) {
+      if (clicked == 0) return;
+      var pos = getCursorPos(e);
+      if (pos < 0) pos = 0;
+      if (pos > w) pos = w;
+      slide(pos);
+    }
+    function getCursorPos(e) {
+      e = (e.changedTouches) ? e.changedTouches[0] : e;
+      var a = img.getBoundingClientRect();
+      return e.pageX - a.left - window.pageXOffset;
+    }
+    function slide(x) {
+      img.style.width = x + "px";
+      slider.style.left = img.offsetWidth - (slider.offsetWidth / 2) + "px";
+    }
+
+    // boyut değişince slider yüksekliğini güncelle
+    var resizeObs = new ResizeObserver(function() {
+      slider.style.height = container.offsetHeight + "px";
+      w = container.offsetWidth;
+    });
+    resizeObs.observe(container);
+  }
+}
+</script>
+</body>
+</html>
