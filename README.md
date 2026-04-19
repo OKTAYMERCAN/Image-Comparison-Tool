@@ -1,7 +1,7 @@
 # Image-Comparison-Tool
 
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Platform](https://img.shields.io/badge/platform-Cross%20Platform-darkmagenta.svg)
+![Platform](https://img.shields.io/badge/platform-Cross%20Platform-darkred.svg)
 
 With this tool you can easily compare images and find the differences.  
 
