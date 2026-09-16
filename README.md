@@ -9,4 +9,8 @@ With this tool you can easily compare images side by side and find the differenc
 <img width="1960" height="1242" alt="image" src="https://github.com/user-attachments/assets/a2979af9-ef59-4cb5-a044-90052b431d1d" />
 
 ---  
+
+Copyright (c) 2026 Oktay Mercan https://github.com/OKTAYMERCAN/Image-Comparison-Tool  
+
+---
 AI used.
